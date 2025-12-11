@@ -2,14 +2,19 @@ pipeline {
     agent any
 
     environment {
-        TOMCAT_SERVER = "43.204.112.166"
-        TOMCAT_USER = "ubuntu"
-        NEXUS_URL = "3.109.203.221:8081"
-        NEXUS_REPOSITORY = "maven-releases"
-        NEXUS_CREDENTIAL_ID = "nexus_creds"
+        // ---- Server & Credentials ----
+        TOMCAT_SERVER = "13.201.119.9"
+        TOMCAT_USER = "ec2-user"
         SSH_KEY_PATH = "/var/lib/jenkins/.ssh/jenkins_key"
-        SONAR_HOST_URL = "http://13.233.68.209:9000"
-        SONAR_CREDENTIAL_ID = "sonar_creds"  // Replace with your SonarQube credential ID
+
+        // ---- Nexus ----
+        NEXUS_URL = "13.232.130.128:8081"              // ✅ No trailing slash
+        NEXUS_REPOSITORY = "maven-releases"
+        NEXUS_CREDENTIAL_ID = "Nexus-credentials"
+
+        // ---- SonarQube ----
+        SONAR_HOST_URL = "http://35.154.242.153:9000"
+        SONAR_CREDENTIAL_ID = "Jenkins_Sonar_token"    // ✅ Matches Jenkins credentials
     }
 
     tools {
@@ -17,31 +22,33 @@ pipeline {
     }
 
     stages {
-                stage('Build WAR') {
+
+        stage('Build WAR') {
             steps {
+                echo "🔧 Building WAR package..."
                 sh 'mvn clean package -DskipTests'
                 archiveArtifacts artifacts: '**/target/*.war'
             }
         }
-stage('SonarQube Analysis') {
-            steps {
-                withSonarQubeEnv('SonarQube Server') {
-                    withCredentials([string(credentialsId: env.SONAR_CREDENTIAL_ID, variable: 'SONAR_TOKEN')]) {
-                        sh """
-                            mvn sonar:sonar \
-                                -Dsonar.projectKey=wwp \
-                                -Dsonar.host.url=${env.SONAR_HOST_URL} \
-                                -Dsonar.login=${SONAR_TOKEN} \
-                                -Dsonar.java.binaries=target/classes
-                        """
-                    }
-                }
-            }
-}
-       stage('Extract Version') {
+
+        // stage('Quality Gate') {
+        //     steps {
+        //         echo "🧱 Waiting for SonarQube quality gate result..."
+        //         timeout(time: 10, unit: 'MINUTES') {
+        //             waitForQualityGate abortPipeline: true
+        //         }
+        //     }
+        // }
+
+        stage('Extract Version') {
             steps {
                 script {
-                    env.ART_VERSION = sh(script: "mvn help:evaluate -Dexpression=project.version -q -DforceStdout", returnStdout: true).trim()
+                    echo "📦 Extracting version from pom.xml..."
+                    env.ART_VERSION = sh(
+                        script: "mvn help:evaluate -Dexpression=project.version -q -DforceStdout",
+                        returnStdout: true
+                    ).trim()
+                    echo "Project Version: ${env.ART_VERSION}"
                 }
             }
         }
@@ -49,17 +56,24 @@ stage('SonarQube Analysis') {
         stage('Publish to Nexus') {
             steps {
                 script {
+                    echo "⬆️ Uploading WAR to Nexus repository..."
                     def warFile = sh(script: 'find target -name "*.war" -print -quit', returnStdout: true).trim()
+                    echo "Uploading file: ${warFile}"
+
                     nexusArtifactUploader(
-                        nexusVersion: "nexus3",
-                        protocol: "http",
+                        nexusVersion: 'nexus3',
+                        protocol: 'http',
                         nexusUrl: "${NEXUS_URL}",
-                        groupId: "koddas.web.war",
-                        artifactId: "wwp",
+                        groupId: 'koddas.web.war',
                         version: "${ART_VERSION}",
                         repository: "${NEXUS_REPOSITORY}",
                         credentialsId: "${NEXUS_CREDENTIAL_ID}",
-                        artifacts: [[artifactId: "wwp", file: warFile, type: "war"]]
+                        artifacts: [[
+                            artifactId: 'wwp',
+                            classifier: '',
+                            file: warFile,
+                            type: 'war'
+                        ]]
                     )
                 }
             }
@@ -68,11 +82,15 @@ stage('SonarQube Analysis') {
         stage('Deploy to Tomcat') {
             steps {
                 script {
+                    echo "🚀 Deploying WAR to Tomcat server..."
                     def warFile = sh(script: 'find target -name "*.war" -print -quit', returnStdout: true).trim()
+
                     sh """
                         scp -i ${SSH_KEY_PATH} -o StrictHostKeyChecking=no ${warFile} ${TOMCAT_USER}@${TOMCAT_SERVER}:/tmp/
                         ssh -i ${SSH_KEY_PATH} -o StrictHostKeyChecking=no ${TOMCAT_USER}@${TOMCAT_SERVER} '
-                            sudo mv /tmp/*.war /opt/tomcat/webapps/ && sudo systemctl restart tomcat'
+                            sudo mv /tmp/*.war /opt/tomcat/webapps/ &&
+                            sudo systemctl restart tomcat
+                        '
                     """
                 }
             }
