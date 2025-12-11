@@ -13,7 +13,7 @@ pipeline {
         NEXUS_CREDENTIAL_ID = "Nexus-credentials"
 
         // ---- SonarQube ----
-        SONAR_HOST_URL = "13.235.70.174:9000"
+        SONAR_HOST_URL = "http://13.235.70.174:9000"
         SONAR_CREDENTIAL_ID = "Jenkins_Sonar_token"    // ✅ Matches Jenkins credentials
     }
 
@@ -28,6 +28,23 @@ pipeline {
                 echo "🔧 Building WAR package..."
                 sh 'mvn clean package -DskipTests'
                 archiveArtifacts artifacts: '**/target/*.war'
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                echo "🔍 Running SonarQube analysis..."
+                withSonarQubeEnv('SonarQube Server') {
+                    withCredentials([string(credentialsId: "${SONAR_CREDENTIAL_ID}", variable: 'SONAR_TOKEN')]) {
+                        sh """
+                            mvn sonar:sonar \
+                              -Dsonar.projectKey=wwp \
+                              -Dsonar.host.url=${SONAR_HOST_URL} \
+                              -Dsonar.login=${SONAR_TOKEN} \
+                              -Dsonar.java.binaries=target/classes
+                        """
+                    }
+                }
             }
         }
 
