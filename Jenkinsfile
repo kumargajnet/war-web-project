@@ -13,7 +13,7 @@ pipeline {
         NEXUS_CREDENTIAL_ID = "Nexus-credentials"
 
         // ---- SonarQube ----
-        SONAR_HOST_URL = "http://35.154.242.153:9000"
+        SONAR_HOST_URL = "13.235.70.174:9000"
         SONAR_CREDENTIAL_ID = "Jenkins_Sonar_token"    // ✅ Matches Jenkins credentials
     }
 
