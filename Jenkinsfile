@@ -14,7 +14,7 @@ pipeline {
 
         // ---- SonarQube ----
         SONAR_HOST_URL = "http://13.235.70.174:9000"
-        SONAR_CREDENTIAL_ID = "Jenkins_Sonar_token"    // ✅ Matches Jenkins credentials
+        SONAR_CREDENTIAL_ID = "Jenkins_Sonar_token1"    // ✅ Matches Jenkins credentials
     }
 
     tools {
