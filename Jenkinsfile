@@ -80,21 +80,28 @@ pipeline {
         }
 
         stage('Deploy to Tomcat') {
-            steps {
-                script {
-                    echo "🚀 Deploying WAR to Tomcat server..."
-                    def warFile = sh(script: 'find target -name "*.war" -print -quit', returnStdout: true).trim()
+    steps {
+        script {
+            echo "🚀 Deploying WAR to Tomcat server..."
+            def warFile = sh(script: 'find target -name "*.war" -print -quit', returnStdout: true).trim()
 
-                    sh """
-                        scp -i ${SSH_KEY_PATH} -o StrictHostKeyChecking=no ${warFile} ${TOMCAT_USER}@${TOMCAT_SERVER}:/tmp/
-                        ssh -i ${SSH_KEY_PATH} -o StrictHostKeyChecking=no ${TOMCAT_USER}@${TOMCAT_SERVER} '
-                            sudo mv /tmp/*.war /opt/tomcat/webapps/ &&
-                            sudo systemctl restart tomcat
-                        '
-                    """
-                }
-            }
+            sh """
+                scp -i ${SSH_KEY_PATH} \
+                -o StrictHostKeyChecking=no \
+                -o UserKnownHostsFile=/dev/null \
+                ${warFile} ${TOMCAT_USER}@${TOMCAT_SERVER}:/tmp/
+
+                ssh -i ${SSH_KEY_PATH} \
+                -o StrictHostKeyChecking=no \
+                -o UserKnownHostsFile=/dev/null \
+                ${TOMCAT_USER}@${TOMCAT_SERVER} '
+                    sudo mv /tmp/*.war /opt/tomcat/webapps/ &&
+                    sudo systemctl restart tomcat
+                '
+            """
         }
+    }
+}
 
         stage('Display URLs') {
             steps {
