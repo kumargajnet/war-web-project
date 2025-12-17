@@ -1,16 +1,17 @@
-CI CD Server (Jenkins)
-=======================
 
-CI : Continuous Integration
+=> To automate project build and deployment process we will use JENKINS.
 
-CD : Continuos Delivery
+===================
+What is Jenkins ?
+===================
 
+=> Open source Software & free
 
-=> CI CD is one appraoch to automate project Build & Deployment process
+=> Developed by using Java Language
 
-===========================
-What is Build & Deployment
-===========================
+=> It is called as CI CD Server
+
+=> It is used to automate project Build and Deployment process.
 
 # About this project
 
