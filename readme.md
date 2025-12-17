@@ -1,6 +1,5 @@
 this is saourav kumar
 
-change to readme file by saourav kumar
 # About this project
 
 ## testing
